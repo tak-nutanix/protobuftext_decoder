@@ -13,16 +13,17 @@ def js_list( ):
     patharray = [ \
                  "./" + BASENAME, \
                  "./alerts" + BASENAME, \
-                 "./cvm_logs/alerts" + BASENAME, \
+                 "./cvm_logs/alerts/" + BASENAME, \
                  ] \
-              + glob.glob("./*-CW-logs/cvm_config/alerts"+ BASENAME ) \
-              + glob.glob("./*logs//cvm_config/alerts" + BASENAME  ) 
+              + glob.glob("./*-CW-logs/cvm_logs/alerts/"+ BASENAME ) \
+              + glob.glob("./*logs//cvm_logs/alerts/" + BASENAME  ) 
 
     a = []
     ProtobufDecoder.setRepeatedKeys( [ "params" ] )
     pb = ProtobufDecoder()
 
     for fn in  patharray :
+        ##print("fn = %s" % fn )
         if ( not os.path.isfile( fn ) )  :
             continue
 
@@ -32,7 +33,6 @@ def js_list( ):
 
         try:
             a = pb.load( open( fn, "r" ) )
-            print("a = %s" % a )
 
         except FileNotFoundError:
             continue
@@ -65,11 +65,15 @@ def replace_string_params( bstr, params_array ):
 
 def main():
 
-    flag_searchfiles = False
-    flag_list = True
+#    flag_searchfiles = False
+#    flag_list = True
     arglen = len( sys.argv ) 
 
     alerts_data = js_list()
+
+    if( alerts_data is None ):
+        print( BASENAME +" file not found.", file=sys.stderr )
+        sys.exit(1) 
 
     if( len( alerts_data ) < 1 ):
         print( "alerts.txt file not found.", file=sys.stderr )
@@ -97,6 +101,8 @@ def main():
                 st =  datetime.fromtimestamp( int( e["creation_timestamp_usecs"] )/ 1000000, JST ).strftime("%Y-%m-%d %H:%M:%S (%Z)" )
    
                 print( "%25s , %25s , %4s , %s , %s , %s" % ( st, rt, ar, e["uuid"], e["alert_uid"], msg ) )
+
+            print("")
 
     ## detailsalerts
     else:

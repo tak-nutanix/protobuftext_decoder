@@ -21,7 +21,7 @@ class ProtobufDecoder:
 
         METHOD_CALLING = 0x01
 
-        debuglevel = 0x0f
+        debuglevel = 0x00
 
         @classmethod
         def setLevel( cls, num ):
@@ -373,9 +373,11 @@ class ProtobufDecoder:
         self.fCxt = ProtobufDecoder.InitContext()
 
 
-    def dump( self, fp ):
+    def load( self, fp ):
         return self.dumps( fp.read() )
 
+    def dump( self, fp ):
+        return self.dumps( fp.read() )
 
     def dumps( self, d ):
         lexer = ProtobufDecoder.PBLexer()
