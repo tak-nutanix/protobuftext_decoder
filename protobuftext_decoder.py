@@ -8,12 +8,54 @@ import json
 ###
 class ProtobufDecoder:
 
+    class Debug :
+        LEXER_ALL     = 0xf0
+
+        LEXER_DETAIL  = 0x40
+        LEXER_TOKEN   = 0x20
+        LEXER_INFO    = 0x10
+
+        PARSER_ALL    = 0x0e
+        PARSER_DETAIL = 0x08
+        PARSER_TOKEN  = 0x04
+
+        METHOD_CALLING = 0x01
+
+        debuglevel = 0x0f
+
+        @classmethod
+        def setLevel( cls, num ):
+            cls.debuglevel = num
+
+        @classmethod
+        def printmsg( cls, lv, msg , a=None ):
+            if( lv & cls.debuglevel ):
+
+                prefix = " " * int( (lv/2)+2 ) + "Debug: "
+                if( a is None ): 
+                    print( prefix + str( msg ) )
+
+                else:
+                    strs = []
+                    for t in a :
+                        if( ProtobufDecoder.TOK_TYPE in t ):
+                            if( t[ProtobufDecoder.TOK_TYPE] == ProtobufDecoder.TYPE_STRING ):
+                                strs.append( t[ProtobufDecoder.TOK_VALUE] )
+                            else:
+                                strs.append( t[ProtobufDecoder.TOK_TYPE] )
+                        else:
+                            strs.append( "??? %s" % t )
+
+                    print( prefix + msg + " [ " + ", ".join(strs) + " ]" )
+
+
     TOK_TYPE="type"
     TOK_VALUE="value"
     TYPE_STRING = "string"
     TYPE_COLON = "COLON:"
     TYPE_START = "START<"
     TYPE_END   = ">END"
+
 
     class SyntaxErrorException( Exception ):
         pass
@@ -26,6 +68,8 @@ class ProtobufDecoder:
 
     @classmethod
     def setRepeatedKeys( cls, a ):
+        ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.METHOD_CALLING,  ( "repeated Key update :  %s -> %s" % ( cls.REPEATED_KEY, a ) ) )
+
         if isinstance( a, list):
             cls.REPEATED_KEY = a 
         else:
@@ -35,8 +79,9 @@ class ProtobufDecoder:
     def clearRepeatedkeys( cls ):
         cls.setRepeatedKeys( [] )
 
-    class PBLexer:
 
+
+    class PBLexer:
         #
         # Internal Mode Classes    
         #
@@ -63,9 +108,12 @@ class ProtobufDecoder:
             def endchar( self ):
                 return self, [ self.stringtoken() ]
 
+
+
         ## Normal Loop
         class NormalMode(Mode):
             def nextchar( self, c ):
+                ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_DETAIL,  ( "%s : nextchar '%s'" % (__class__, c ) ) )
                 a = []
 
                 if c == '\'' :
@@ -80,25 +128,33 @@ class ProtobufDecoder:
                        a.append( self.stringtoken() )
 
                    a.append( { ProtobufDecoder.TOK_TYPE : ProtobufDecoder.TYPE_COLON })
+                   ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_TOKEN,  ( "%s : token" % __class__ ) , a )
 
                 elif c == '<' :
                    if( len( self.buff ) > 0 ):
                        a.append( self.stringtoken() )
     
                    a.append( { ProtobufDecoder.TOK_TYPE : ProtobufDecoder.TYPE_START })
+                   ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_TOKEN,  ( "%s : token" % __class__ ) , a )
 
                 elif c == '>' :
                    if( len( self.buff ) > 0 ):
                        a.append( self.stringtoken() )
     
                    a.append( { ProtobufDecoder.TOK_TYPE : ProtobufDecoder.TYPE_END })
+                   ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_TOKEN,  ( "%s : token" % __class__ ) , a )
 
                 elif c == ' ' :
                    if( len( self.buff ) > 0 ):
                        a.append( self.stringtoken() )
 
+                   ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_TOKEN,  ( "%s : token" % __class__ ) , a )
+
                 elif c == '\n' :
+                   if( len( self.buff ) > 0 ):
                        a.append( self.stringtoken() )
+
+                   ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_TOKEN,  ( "%s : token" % __class__ ) , a )
 
                 else:
                    self.buff += c           
@@ -114,6 +170,7 @@ class ProtobufDecoder:
 
 
             def nextchar( self, c ):
+                ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_DETAIL,  ( "%s : nextchar '%s'" % (__class__, c ) ) )
                 if( self.inBackSlash ):
                     self.inbackShash = False
                     self.buff +=c 
@@ -139,6 +196,16 @@ class ProtobufDecoder:
         def __iter__(self):
             return iter( self.tlist.copy() )
 
+        def len( self ):
+            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_INFO, ( "%s :  len %d" % ( __class__, len(self.tlist) ) ) )
+            return len( self.tlist )
+
+#        def getNextToken( self ):
+#            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_INFO,  ( "%s :  get next token" % ( __class__, ) ) )
+#            if( len( self.tlist ) > 0 ):
+#                t = self.tlist[0]
+#                del( self.tlist[0] )
+#                return t
 
         def nextchar(self, c ):
             retmode, a = self.mode.nextchar( c )
@@ -148,10 +215,11 @@ class ProtobufDecoder:
                self.tlist += a
 
         def endchar(self):
+            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_INFO, ( "%s :  endchar " % ( __class__ ) ) )
             retmode, a = self.mode.endchar( )
 
-        def tokenList(self):
-            return self.tlist
+#        def tokenList(self):
+#            return self.tlist
 
 
         #
@@ -178,6 +246,7 @@ class ProtobufDecoder:
             while True:
                 try:
                     t = next( iterobj )
+                    ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  token: " % ( __class__ ) ), [ t ] )
 
                     if( t[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_STRING ):
                         self.setResult( ProtobufDecoder.ColonContext( t[ ProtobufDecoder.TOK_VALUE ] ).parse( iterobj ) )
@@ -195,8 +264,7 @@ class ProtobufDecoder:
 
 
         def setResult( self, r ):
-            ##self.result.append( r )
-            ##print("%s setResult: %s" % ( self.__class__, r ) )
+            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_TOKEN,  ( "%s :  result %s " % ( __class__ , r ) ) )
 
             newdict_flag = False
             for k in r:
@@ -220,8 +288,6 @@ class ProtobufDecoder:
             
             self.curdict.update( r )
 
-            ##print("%s setResult: Init Dict is %s " % ( self.__class__, self.result ) )
-
 
     class ColonContext(Context):
         def __init__(self, keystring ):
@@ -232,9 +298,11 @@ class ProtobufDecoder:
 
             try:
                 t = next( iterobj )
+                ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  colon? " % ( __class__ ) ), [ t ] )
 
                 if( t[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_COLON ): ## ":" 
                     t2 = next( iterobj )
+                    ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  token: " % ( __class__ ) ), [ t2 ] )
 
                     if( t2[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_STRING ): ## ":" "string"
                         return  { self.key : t2[ ProtobufDecoder.TOK_VALUE ] }
@@ -261,6 +329,8 @@ class ProtobufDecoder:
             while True:
                 try:
                     t = next( iterobj )
+                    ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  token: " % ( __class__ ) ), [ t ] )
+
                     if( t[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_STRING ): 
                         self.setResult( ProtobufDecoder.ColonContext( t[ ProtobufDecoder.TOK_VALUE ] ).parse( iterobj ) )
 
@@ -280,7 +350,9 @@ class ProtobufDecoder:
 
 
         def setResult( self, r ):
-            ##print("%s setResult: %s" % ( self.__class__, r ) )
+
+            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_TOKEN,  ( "%s :  result %s " % ( __class__ , r ) ) )
+
             for k in r:
                 if( k in self.result ):
                     d = self.result[ k ]
@@ -292,8 +364,6 @@ class ProtobufDecoder:
                 else:
                     self.result[ k ] = r[k]
 
-
-            ##print("%s setResult: Array Dict is %s " % ( self.__class__, self.result ) )
 
 ##
 ## ProtobufDecoder tself
