@@ -390,7 +390,7 @@ class ProtobufDecoder:
 
 def main():
 
-    ProtobufDecoder.setRepeatedKeys( [ "params" ] )
+    ProtobufDecoder.setRepeatedKeys( [ "params", "classification_list" ] )
     pb = ProtobufDecoder()
 
     if( len( sys.argv ) > 1 ):
