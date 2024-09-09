@@ -19,7 +19,7 @@ def js_list( ):
               + glob.glob("./*logs//cvm_logs/alerts/" + BASENAME  ) 
 
     a = []
-    ProtobufDecoder.setRepeatedKeys( [ "params" ] )
+    ##ProtobufDecoder.setRepeatedKeys( [ "params" ] )
     pb = ProtobufDecoder()
 
     for fn in  patharray :
@@ -65,11 +65,23 @@ def replace_string_params( bstr, params_array ):
 
 def main():
 
-#    flag_searchfiles = False
-#    flag_list = True
-    arglen = len( sys.argv ) 
+    flag_details = True
+    flag_dumpall = False
 
-    alerts_data = js_list()
+    alerts_data = None
+
+    if( sys.stdin.isatty() ): 
+
+        alerts_data = js_list()
+        if  len( sys.argv )  < 2 :
+            flag_details = False
+
+    else:  ## Ex. alert_list.py < list_alerts.txt
+        pb = ProtobufDecoder()
+        alerts_data = pb.load( sys.stdin )
+        flag_details = True
+        flag_dumpall = True
+            
 
     if( alerts_data is None ):
         print( BASENAME +" file not found.", file=sys.stderr )
@@ -84,7 +96,7 @@ def main():
 
 
     ## list alerts
-    if( arglen < 2 ):
+    if( not flag_details ):
 
             for e in alerts_data : 
                 if( e["resolved"] == True ):
@@ -108,8 +120,7 @@ def main():
     else:
             for e in alerts_data :
 
-                if( e["uuid"] == sys.argv[1] ):
-
+                if flag_dumpall or ( e["uuid"] == sys.argv[1] ):
 
                     create_time_sec =  int( e["creation_timestamp_usecs"] ) / 1000000
                     st  = datetime.fromtimestamp( create_time_sec, JST ).strftime("%Y-%m-%d %H:%M:%S (%Z)" )  
@@ -134,10 +145,15 @@ def main():
                     else:
                         print( "Resolved On               : %s  --  %s" % ( rt , rtu ) )
 
-                    print( "Auto Resolved             : %s" % e["auto_resolved"] )
+                    if "auto_resolved" in e :
+                        print( "Auto Resolved             : %s" % e["auto_resolved"] )
+                    else:
+                        print( "Auto Resolved             : (unknown)" )
                     if( "affected_entities" in e ):
                         for ae in e["affected_entities"] :
                             print( "Entities On               : %s:%s ( %s )" % ( ae["entity_type_display_name"], ae["uuid"], ae["entity_name"] ) )
+                    else:
+                            print( "Entities On               : (unknown)" )
                     print("")
 
     sys.exit(0) 
