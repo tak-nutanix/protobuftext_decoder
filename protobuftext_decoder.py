@@ -37,16 +37,19 @@ class ProtobufDecoder:
 
                 else:
                     strs = []
-                    for t in a :
-                        if( ProtobufDecoder.TOK_TYPE in t ):
-                            if( t[ProtobufDecoder.TOK_TYPE] == ProtobufDecoder.TYPE_STRING ):
-                                strs.append( t[ProtobufDecoder.TOK_VALUE] )
+                    if len( a ) > 0 :
+                        for t in a :
+                            if( ProtobufDecoder.TOK_TYPE in t ):
+                                if( t[ProtobufDecoder.TOK_TYPE] == ProtobufDecoder.TYPE_STRING ):
+                                    strs.append( t[ProtobufDecoder.TOK_VALUE] )
+                                else:
+                                    strs.append( t[ProtobufDecoder.TOK_TYPE] )
                             else:
-                                strs.append( t[ProtobufDecoder.TOK_TYPE] )
-                        else:
-                            strs.append( "??? %s" % t )
-
-                    print( prefix + msg + " [ " + ", ".join(strs) + " ]" )
+                                strs.append( "??? %s" % t )
+                        print( prefix + msg + " [[ " + ", ".join(strs) + " ]]" )
+                    else:
+                        print( prefix + msg + " [[ (nothing) ]]" )
+                        
 
 
     TOK_TYPE="type"
@@ -55,6 +58,7 @@ class ProtobufDecoder:
     TYPE_COLON = "COLON:"
     TYPE_START = "START<"
     TYPE_END   = ">END"
+    TYPE_EOF_MARKER = "__EOF__"
 
 
     class SyntaxErrorException( Exception ):
@@ -99,6 +103,7 @@ class ProtobufDecoder:
             def stringtoken( self ):
                 s = self.buff
                 self.buff = ""
+                ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_DETAIL,  ( "%s : string token '%s'" % (__class__ , s ) ) )
                 return  { ProtobufDecoder.TOK_TYPE : ProtobufDecoder.TYPE_STRING, ProtobufDecoder.TOK_VALUE : s } 
 
 
@@ -106,8 +111,12 @@ class ProtobufDecoder:
                 return self, []
 
             def endchar( self ):
-                return self, [ self.stringtoken() ]
+                ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_DETAIL,  ( "%s : endchar 'EOF'" % __class__ ) )
+                eof = { ProtobufDecoder.TOK_TYPE : ProtobufDecoder.TYPE_EOF_MARKER }
+                if len( self.buff ) > 0 :
+                    return self, [ self.stringtoken(), eof ]
 
+                return self, [ eof ]
 
 
         ## Normal Loop
@@ -130,14 +139,14 @@ class ProtobufDecoder:
                    a.append( { ProtobufDecoder.TOK_TYPE : ProtobufDecoder.TYPE_COLON })
                    ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_TOKEN,  ( "%s : token" % __class__ ) , a )
 
-                elif c == '<' :
+                elif c == '<' or c == '{':
                    if( len( self.buff ) > 0 ):
                        a.append( self.stringtoken() )
     
                    a.append( { ProtobufDecoder.TOK_TYPE : ProtobufDecoder.TYPE_START })
                    ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_TOKEN,  ( "%s : token" % __class__ ) , a )
 
-                elif c == '>' :
+                elif c == '>' or c == '}':
                    if( len( self.buff ) > 0 ):
                        a.append( self.stringtoken() )
     
@@ -209,6 +218,7 @@ class ProtobufDecoder:
 
         def nextchar(self, c ):
             retmode, a = self.mode.nextchar( c )
+##            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.LEXER_INFO, ( "%s :  nextchar " %  __class__ ), a  )
     
             self.mode = retmode
             if len( a ) > 0 :
@@ -253,6 +263,11 @@ class ProtobufDecoder:
          
                     elif( t[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_START ):
                         self.setResult(  ProtobufDecoder.ArrayContext().parse( iterobj ) )
+
+                    elif( t[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_EOF_MARKER ):
+                        ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  EOF found" %  __class__ ) )
+                        self.setResult(  ProtobufDecoder.ArrayContext().parse( iterobj ) )
+                        break
                     else:
                         raise SyntaxErrorException("SyntaxError in %s" % t )
 
@@ -264,9 +279,13 @@ class ProtobufDecoder:
 
 
         def setResult( self, r ):
-            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_TOKEN,  ( "%s :  result %s " % ( __class__ , r ) ) )
+            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_TOKEN,  ( "%s :  setResult %s " % ( __class__ , r ) ) )
 
             newdict_flag = False
+            if r is None:
+                ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_TOKEN,  ( "%s :  r is nothing " % ( __class__ ) ) )
+                return 
+
             for k in r:
                 if( k in ProtobufDecoder.REPEATED_KEY ):
                     if( k in self.curdict ):
@@ -286,8 +305,9 @@ class ProtobufDecoder:
                     self.curdict.update( r )
                     return
             
-            self.curdict.update( r )
+                self.curdict.update( r )
 
+            return
 
     class ColonContext(Context):
         def __init__(self, keystring ):
@@ -297,26 +317,38 @@ class ProtobufDecoder:
         def parse( self, iterobj ):
 
             try:
+
                 t = next( iterobj )
                 ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  colon? " % ( __class__ ) ), [ t ] )
 
                 if( t[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_COLON ): ## ":" 
                     t2 = next( iterobj )
-                    ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  token: " % ( __class__ ) ), [ t2 ] )
+                    ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  token2: " % ( __class__ ) ), [ t2 ] )
 
-                    if( t2[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_STRING ): ## ":" "string"
+                    if( t2[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_STRING ): ## key ":" "string"
+                        ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  colon return: %s:%s" % ( __class__, self.key, t2[ ProtobufDecoder.TOK_VALUE ] ) ) )
                         return  { self.key : t2[ ProtobufDecoder.TOK_VALUE ] }
 
-                    elif( t2[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_START ): ## ":" 
+                    elif( t2[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_START ): ## key ":" "{"
                         r = ProtobufDecoder.ArrayContext().parse( iterobj )
+                        ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  colon return: %s:%s" % ( __class__, self.key , r ) )  )
                         return { self.key : r }
 
                     else:
                         raise SyntaxErrorException("SyntaxError in %s" % t )
 
+                elif( t[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_START ): ## ":" 
+                    r = ProtobufDecoder.ArrayContext().parse( iterobj )
+                    ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  colon return: %s:%s" % ( __class__, self.key , r ) )  )
+                    return { self.key : r }
+
+                    ## ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  no colon" % ( __class__ ) ) )
+                    ## ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  token1: " % ( __class__ ) ), [ t ] )
+
             except StopIteration:
                raise SyntaxErrorException("SyntaxError in %s" % t )
 
+            return { "error!!": "colon error!!" }
 
 
     class ArrayContext(Context):
@@ -338,6 +370,7 @@ class ProtobufDecoder:
                         self.setResult( ProtobufDecoder.ArrayContext().parse( iterobj ) )
             
                     elif( t[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_END ): ## ">" 
+                        ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  array Result: %s" % ( __class__ , self.result ) ) )
                         return self.result
 
                     else:
@@ -346,12 +379,13 @@ class ProtobufDecoder:
                 except StopIteration:
                     break
 
-            return self.curDict
+            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  array Result2: %s" % ( __class__ , self.result ) ) )
+            return self.result
 
 
         def setResult( self, r ):
 
-            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_TOKEN,  ( "%s :  result %s " % ( __class__ , r ) ) )
+            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_TOKEN,  ( "%s :  setResult %s " % ( __class__ , r ) ) )
 
             for k in r:
                 if( k in self.result ):
@@ -364,6 +398,7 @@ class ProtobufDecoder:
                 else:
                     self.result[ k ] = r[k]
 
+            ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_TOKEN,  ( "%s :  Array holding :%s " % ( __class__ , self.result ) ) )
 
 ##
 ## ProtobufDecoder tself
