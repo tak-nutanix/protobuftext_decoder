@@ -269,7 +269,7 @@ class ProtobufDecoder:
                         self.setResult(  ProtobufDecoder.ArrayContext().parse( iterobj ) )
                         break
                     else:
-                        raise SyntaxErrorException("SyntaxError in %s" % t )
+                        raise ProtobufDecoder.SyntaxErrorException("SyntaxError in %s" % t )
 
                 except StopIteration:
                     break
@@ -420,7 +420,12 @@ class ProtobufDecoder:
             lexer.nextchar( c )                   
         lexer.endchar()
 
-        return ProtobufDecoder.InitContext().parse( iter( lexer ) )
+        a = ProtobufDecoder.InitContext().parse( iter( lexer ) )
+        if len(a) == 1 :
+            return a[0]
+        else:
+           return a
+##        return ProtobufDecoder.InitContext().parse( iter( lexer ) )
 
 
 def main():
