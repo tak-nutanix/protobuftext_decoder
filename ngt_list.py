@@ -10,18 +10,16 @@ from protobuftext_decoder import ProtobufDecoder
 
 
 BASENAME="nutanix_guest_tools_cli.txt"
-#BASENAME="n.txt"
 
 def pb_list( ):
     patharray = [ \
                  "./" + BASENAME, \
-                 "./cvm_logs/alerts/" + BASENAME, \
+                 "./cvm_config/" + BASENAME, \
                  ] \
-              + glob.glob("./*-CW-logs/cvm_logs/"+ BASENAME ) \
-              + glob.glob("./*logs//cvm_logs/" + BASENAME  ) 
+              + glob.glob("./*-CW-logs/cvm_config/"+ BASENAME ) \
+              + glob.glob("./*logs//cvm_config/" + BASENAME  ) 
 
     a = []
-    
     ProtobufDecoder.setRepeatedKeys( [ "vm_uuid_vec", "vm_info_vec" ] )
     pb = ProtobufDecoder()
 
@@ -74,6 +72,7 @@ def replace_string_params( bstr, params_array ):
 
 
 def main():
+    print( "defaultencoding: %s"% sys.getdefaultencoding() )
 
 #    flag_searchfiles = False
 #    flag_list = True
@@ -112,10 +111,10 @@ def main():
             for e in ngt_data["vm_info_vec"] :
                 if e["vm_uuid"] == sys.argv[1] :    
             
+                    print("NGT UUID                  : %s" % e["ngt_uuid"] )   
+                    ##print("System UUID               : %s" % e["system_uuid"] )   
                     print("VM Id:                    : %s" % e["vm_uuid"] )
                     print("VM Name                   : %s" % e["vm_name"] )   
-                    print("NGT UUID                  : %s" % e["ngt_uuid"] )   
-                    print("System UUID               : %s" % e["system_uuid"] )   
 
                     print("NGT Feature:")
                     print("  NGT Enabled             : %s" % e["guest_tools_enabled"] )   
@@ -128,9 +127,9 @@ def main():
                     print("  Communication Link Active : %s" % e["communication_link_active"] )   
                     print("  Serial Link Active        : %s" % e["communication_link_over_serial_port_active"] )   
 
-                    print("VM Info:" )   
-                    if "vm_info" in e :
+                    if ( "vm_info" in e ) and ( len( e["vm_info"] ) > 0 ):
                         v = e["vm_info"]
+                        print("VM Info:" )   
                         print("  NGT version on Guest    : %s" % v["ngt_version"] )   
                         print("  guestOS Type/Release    : %s ( %s )" % ( v["guest_os_type"], v["guest_os_release"] ) )
                         print("  guestOS Version         : %s" % ( v["guest_os_version"] ) )
@@ -169,6 +168,8 @@ def main():
                             rt  =  datetime.fromtimestamp( int( v["client_cert_expiry_date"] ), JST).strftime("%Y-%m-%d %H:%M:%S (%Z)")
                             rtu =  datetime.fromtimestamp( int( v["client_cert_expiry_date"] ), UTC).strftime("%Y-%m-%d %H:%M:%S (%Z)") 
                             print("  Cert expire date        : %s -- %s" % ( rt, rtu ) )
+                    else:
+                        print("VM Info: (nothing)" )   
 
                     print("")
                 ## for loop
