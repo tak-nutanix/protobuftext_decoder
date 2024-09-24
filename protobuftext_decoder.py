@@ -429,16 +429,36 @@ class ProtobufDecoder:
 
 
 def main():
+    arglen = len( sys.argv )
 
-    ProtobufDecoder.setRepeatedKeys( [ "params", "classification_list" ] )
-    pb = ProtobufDecoder()
+    if arglen > 3 :
+        ##  cmd "-r" "repeatedkey1,key2,key3..." "filename"
 
-    if( len( sys.argv ) > 1 ):
+        ProtobufDecoder.setRepeatedKeys( ",".split( sys.argv[2] ) )
+        pb = ProtobufDecoder()
+        print( json.dumps( pb.dump( open( sys.argv[3], "r" ) ), indent=4 ) )
+
+    elif arglen > 2 :
+        ##  cmd "-r" "repeatedkey1,key2,key3..." < stdin
+
+        ProtobufDecoder.setRepeatedKeys( sys.argv[2].split(",") )
+        pb = ProtobufDecoder()
+        print( json.dumps( pb.dump( sys.stdin ), indent=4 ) )
+    elif arglen > 1 :
+        ##  cmd "filename"
+
+        pb = ProtobufDecoder()
         print( json.dumps( pb.dump( open( sys.argv[1], "r" ) ), indent=4 ) )
 
-    else: ## stdin is file 
+    else:
+        ##  cmd < stdin
+        pb = ProtobufDecoder()
         print( json.dumps( pb.dump( sys.stdin ), indent=4 ) )
 
 
 if __name__ == '__main__' :
     main()
+
+
+
+
