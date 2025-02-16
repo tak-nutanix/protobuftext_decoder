@@ -19,7 +19,7 @@ def js_list( ):
               + glob.glob("./*logs//cvm_logs/alerts/" + BASENAME  ) 
 
     a = []
-    ##ProtobufDecoder.setRepeatedKeys( [ "params" ] )
+    ProtobufDecoder.setRepeatedKeys( [ "params" ] )
     pb = ProtobufDecoder()
 
     for fn in  patharray :
@@ -96,15 +96,15 @@ def main():
 
 
     ## list alerts
-    if( not flag_details ):
+    if not flag_details :
 
             for e in alerts_data : 
-                if( e["resolved"] == True ):
+                if "resolved" in e and  e["resolved"] == True :
                     rt =  datetime.fromtimestamp( e["resolved_time_stamp_in_usecs"] /1000000, JST).strftime("%Y-%m-%d %H:%M:%S (%Z)")
                 else:
                     rt =  "         - - -         "
     
-                if(  e["auto_resolved"] == True ):
+                if "auto_resolve" in e and  e["auto_resolved"] == True :
                     ar = "auto"
                 else:
                     ar=  " -- "
@@ -115,6 +115,11 @@ def main():
                 print( "%25s , %25s , %4s , %s , %s , %s" % ( st, rt, ar, e["uuid"], e["alert_uid"], msg ) )
 
             print("")
+
+    ## RAW mode ##
+    elif sys.argv[1] == "RAW" :
+        print( "### RAW MODE ####", file=sys.stderr )
+        print( json.dumps( alerts_data, indent=4 ) )
 
     ## detailsalerts
     else:

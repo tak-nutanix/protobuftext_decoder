@@ -40,8 +40,13 @@ def pb_list( ):
                 ## s[1] = stdout outputs
                 ## ---- ^[stderr]:$ ----------
                 ## s[2] = stderr outputs
+                t = re.split(r'\nCommand exit status code:', s[1] )
+                ## t[0] = {
+                ##  protocolbuf_text...
+                ## }
+                ## t[1] = Command exit status code: *
 
-            a = pb.dumps( s[1] )
+            a = pb.dumps( t[0] )
 
         except FileNotFoundError:
             continue
@@ -109,7 +114,7 @@ def main():
         ## NGT details
         else:
             for e in ngt_data["vm_info_vec"] :
-                if e["vm_uuid"] == sys.argv[1] :    
+                if e["vm_uuid"] == sys.argv[1] or e["vm_name"] == sys.argv[1] or e["ngt_uuid"] == sys.argv[1] :    
             
                     print("NGT UUID                  : %s" % e["ngt_uuid"] )   
                     ##print("System UUID               : %s" % e["system_uuid"] )   
@@ -164,9 +169,9 @@ def main():
 
                         print("Client Certiticates:")
                         print("  Client Cert generated   : %s" % e["client_certificates_generated"] )
-                        if "client_cert_expiry_date" in v :
-                            rt  =  datetime.fromtimestamp( int( v["client_cert_expiry_date"] ), JST).strftime("%Y-%m-%d %H:%M:%S (%Z)")
-                            rtu =  datetime.fromtimestamp( int( v["client_cert_expiry_date"] ), UTC).strftime("%Y-%m-%d %H:%M:%S (%Z)") 
+                        if "client_cert_expiry_date" in e :
+                            rt  =  datetime.fromtimestamp( int( e["client_cert_expiry_date"] ), JST).strftime("%Y-%m-%d %H:%M:%S (%Z)")
+                            rtu =  datetime.fromtimestamp( int( e["client_cert_expiry_date"] ), UTC).strftime("%Y-%m-%d %H:%M:%S (%Z)") 
                             print("  Cert expire date        : %s -- %s" % ( rt, rtu ) )
                     else:
                         print("VM Info: (nothing)" )   
