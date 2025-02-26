@@ -77,8 +77,14 @@ def main():
             flag_details = False
 
     else:  ## Ex. alert_list.py < list_alerts.txt
+        ProtobufDecoder.setRepeatedKeys( [ "params" ] )
         pb = ProtobufDecoder()
-        alerts_data = pb.load( sys.stdin )
+        a = pb.load( sys.stdin )
+        if "alert_id" in a :
+            alerts_data = [ a ]
+        else:
+            alerts_data = a
+
         flag_details = True
         flag_dumpall = True
             
@@ -117,7 +123,7 @@ def main():
             print("")
 
     ## RAW mode ##
-    elif sys.argv[1] == "RAW" :
+    elif len( sys.argv ) > 1 and sys.argv[1] == "RAW" :
         print( "### RAW MODE ####", file=sys.stderr )
         print( json.dumps( alerts_data, indent=4 ) )
 
@@ -131,7 +137,7 @@ def main():
                     st  = datetime.fromtimestamp( create_time_sec, JST ).strftime("%Y-%m-%d %H:%M:%S (%Z)" )  
                     stu = datetime.fromtimestamp( create_time_sec, UTC ).strftime("%Y-%m-%d %H:%M:%S (%Z)" )
 
-                    if( e["resolved"] == True ):
+                    if e["resolved"] == True :
                         rt  =  datetime.fromtimestamp( e["resolved_time_stamp_in_usecs"] /1000000, JST).strftime("%Y-%m-%d %H:%M:%S (%Z)")
                         rtu =  datetime.fromtimestamp( e["resolved_time_stamp_in_usecs"] /1000000, UTC).strftime("%Y-%m-%d %H:%M:%S (%Z)") 
                     else:

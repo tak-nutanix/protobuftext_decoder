@@ -335,7 +335,7 @@ class ProtobufDecoder:
                         return { self.key : r }
 
                     else:
-                        raise SyntaxErrorException("SyntaxError in %s" % t )
+                        raise ProtobufDecoder.SyntaxErrorException("SyntaxError in %s" % t )
 
                 elif( t[ ProtobufDecoder.TOK_TYPE ] == ProtobufDecoder.TYPE_START ): ## ":" 
                     r = ProtobufDecoder.ArrayContext().parse( iterobj )
@@ -346,7 +346,7 @@ class ProtobufDecoder:
                     ## ProtobufDecoder.Debug.printmsg( ProtobufDecoder.Debug.PARSER_DETAIL,  ( "%s :  token1: " % ( __class__ ) ), [ t ] )
 
             except StopIteration:
-               raise SyntaxErrorException("SyntaxError in %s" % t )
+               raise ProtobufDecoder.SyntaxErrorException("SyntaxError in %s" % t )
 
             return { "error!!": "colon error!!" }
 
@@ -374,7 +374,7 @@ class ProtobufDecoder:
                         return self.result
 
                     else:
-                        raise SyntaxErrorException("SyntaxError in %s" % t )
+                        raise ProtobufDecoder.SyntaxErrorException("SyntaxError in %s" % t )
 
                 except StopIteration:
                     break
