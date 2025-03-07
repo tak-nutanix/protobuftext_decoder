@@ -77,7 +77,7 @@ def replace_string_params( bstr, params_array ):
 
 
 def main():
-    print( "defaultencoding: %s"% sys.getdefaultencoding() )
+    ##print( "## defaultencoding: %s"% sys.getdefaultencoding() )
 
 #    flag_searchfiles = False
 #    flag_list = True
@@ -97,6 +97,7 @@ def main():
         if len( sys.argv ) < 2 :
             for e in ngt_data["vm_info_vec"] :
 
+                print("NGT UUID           : %s" % e["ngt_uuid"] )   
                 print("VM Id:             : %s" % e["vm_uuid"] )
                 print("VM Name            : %s" % e["vm_name"] )   
                 print("NGT Enabled        : %s" % e["guest_tools_enabled"] )   
@@ -104,6 +105,9 @@ def main():
                 print("VSS Snapshot       : %s" % e["capabilities"]["vss_snapshot"] )   
                 print("File Level Restore : %s" % e["capabilities"]["file_level_restore"] )   
                 print("Communication Link Active : %s" % e["communication_link_active"] )   
+                if "communication_link_over_serial_port_active" in e :
+                    print("Serial Link Enabled       : %s" % e["communication_link_over_serial_port_active"] )   
+
                 print("")
 
         ## RAW mode ##
@@ -130,7 +134,7 @@ def main():
                     print("Communication Link Info:")
                     print("  Communication Link Type   : %s" % e["communication_type"] )   
                     print("  Communication Link Active : %s" % e["communication_link_active"] )   
-                    print("  Serial Link Active        : %s" % e["communication_link_over_serial_port_active"] )   
+                    print("  Serial Link Enabled       : %s" % e["communication_link_over_serial_port_active"] )   
 
                     if ( "vm_info" in e ) and ( len( e["vm_info"] ) > 0 ):
                         v = e["vm_info"]
