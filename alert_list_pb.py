@@ -113,8 +113,6 @@ def main():
     JST = timezone(timedelta(hours=+9), 'JST')
     UTC = timezone.utc
 
-    print("RAW %s" % flag_raw )
-
     ## list alerts
     if not flag_details :
 
