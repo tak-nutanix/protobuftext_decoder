@@ -23,7 +23,7 @@ def js_list( ):
     pb = ProtobufDecoder()
 
     for fn in  patharray :
-        ##print("fn = %s" % fn )
+        ## print("fn = %s" % fn )
         if ( not os.path.isfile( fn ) )  :
             continue
 
@@ -65,41 +65,55 @@ def replace_string_params( bstr, params_array ):
 
 def main():
 
-    flag_details = True
+    flag_serchfiles = True
+    flag_details = False
+    flag_raw = False
     flag_dumpall = False
 
     alerts_data = None
 
-    if( sys.stdin.isatty() ): 
 
-        alerts_data = js_list()
-        if  len( sys.argv )  < 2 :
-            flag_details = False
+    if len( sys.argv ) < 2  :
+        flag_details = False
+    else:
+        flag_details = True
 
-    else:  ## Ex. alert_list.py < list_alerts.txt
+        if sys.argv[1] == "RAW" :
+            flag_raw = True
+        elif sys.argv[1] == "ALL" :
+            flag_dumpall = True
+
+
+    ## Ex. alert_list.py < list_alerts.txt
+    if( not sys.stdin.isatty() ):
         ProtobufDecoder.setRepeatedKeys( [ "params" ] )
         pb = ProtobufDecoder()
         a = pb.load( sys.stdin )
-        if "alert_id" in a :
-            alerts_data = [ a ]
-        else:
-            alerts_data = a
+        if len( a ) > 0  :
+            print("len = %s" % len(a ))
+            if "alert_id" in a :
+                alerts_data = [ a ]
+            else:
+                alerts_data = a
 
-        flag_details = True
-        flag_dumpall = True
-            
+            flag_serchfiles = False
 
-    if( alerts_data is None ):
+    ## search alerts.txt file
+    if flag_serchfiles :
+        alerts_data = js_list()
+
+    if alerts_data is None :
         print( BASENAME +" file not found.", file=sys.stderr )
         sys.exit(1) 
 
-    if( len( alerts_data ) < 1 ):
+    if len( alerts_data ) < 1 :
         print( "alerts.txt file not found.", file=sys.stderr )
         sys.exit(1) 
 
     JST = timezone(timedelta(hours=+9), 'JST')
     UTC = timezone.utc
 
+    print("RAW %s" % flag_raw )
 
     ## list alerts
     if not flag_details :
@@ -123,7 +137,7 @@ def main():
             print("")
 
     ## RAW mode ##
-    elif len( sys.argv ) > 1 and sys.argv[1] == "RAW" :
+    elif flag_raw :
         print( "### RAW MODE ####", file=sys.stderr )
         print( json.dumps( alerts_data, indent=4 ) )
 
